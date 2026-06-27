@@ -1,4 +1,4 @@
-import ui_assault_face_src from "../src/assets/UI_assault_Face.png"
+import ui_assault_face_src from "../src/assets/UI_Assault_Face.png"
 class UI
 {
     constructor(player, context, round, number_of_enemies)
