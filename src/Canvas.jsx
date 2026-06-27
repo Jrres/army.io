@@ -64,7 +64,7 @@ import classes_src from "./assets/classes.png";
 import classes_b_w_src from "./assets/classes_black_white.png";
 import menu_src from "./assets/menu_background.png";
 import class_lock_in_sound from "./assets/class_lock_in_sound.wav";
-import alliesOperator from "./assets/alliesBuffSound.mp3";
+import alliesOperator from "./assets/alliesbuffsound.mp3";
 
 import assault_class_src from "./assets/spritesheets/AssaultClassShooter.png";
 import recon_class_src from "./assets/spritesheets/ReconClassShooter.png";
