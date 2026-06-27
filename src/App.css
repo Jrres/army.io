@@ -1,0 +1,136 @@
+body{
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* prevents scrollbars */
+}
+h1{
+font-size: 40px;
+font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+color: purple;
+}
+#container
+{
+  background-image: url("./assets/background.png");
+  background-position: 0px -500px;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* Keeps it in place while scrolling */
+}
+#game-button{
+  z-index:1000;
+  font-size: 100px;
+  background-color: #002a66;
+  color: white;
+  font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  padding: 15px 100px; /* Top/Bottom Left/Right */
+  border-radius: 5%;
+  transition-duration: 0.4s;
+}
+#game-button:hover{
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.6)
+}
+#button-layout{
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  height:100vh;
+}
+#top{
+  border-bottom: 1px solid gray; /* Creates a 2px solid black line */
+  padding-bottom: 10px;  
+}
+#top img{
+  position: absolute;
+  height:300px;
+  top: 0;
+  right: 0;
+}
+#img-bottom-right{
+  display: flex;
+  justify-content: flex-end; /* Aligns horizontally to the right */
+  align-items: flex-end;     /* Aligns vertically to the bottom */
+  height: 100px;
+  overflow:visible;
+}
+
+#img-bottom-right #ranger{
+  z-index: 100;
+  height: 1500px;
+  object-position: 1% 200px;
+  animation: ranger1 1.5s ease-in forwards, moveanim ease-in-out 2s 1.5s forwards infinite;
+  overflow:visible;
+  rotate: -20deg;
+}
+
+#img-top-right img{
+  z-index: 100;
+  height: 400px;
+  object-position: 60px 300px;
+  animation: ranger2 1.5s ease-in-out forwards, moveanim ease-in-out 2s 1s forwards infinite;
+  overflow:visible;
+  position:absolute;
+  rotate: 15deg;
+}
+#barrier{
+  z-index:101;
+  object-position: -200px 40px;
+  width:1000px;
+  position:absolute;
+}
+#blood
+{
+  z-index:102;
+  object-position: -300px -500px;
+  height: 200px;
+  overflow:visible;
+  position:absolute;
+  animation: flashingblood 0.5s ease-in-out forwards;
+}
+@keyframes ranger1 {
+  0% 
+  {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  100%
+  {
+    opacity: 1;
+    transform: translate(10%, -20%);
+  }
+}
+@keyframes ranger2 {
+  0%
+  {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  50%
+  {
+    opacity: 1;
+    transform: translate(20%, 5%);
+  }
+  
+}
+
+@keyframes flashingblood
+{
+  from{
+    opacity: 0;
+    scale:1;
+  }
+  to{
+    opacity: 1;
+    scale:1.02;
+  }
+}
+@keyframes moveanim
+{
+  from{
+    scale: 1.2;
+  }
+  to{
+    scale: 1.1;
+  }
+}
+
