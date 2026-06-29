@@ -1229,6 +1229,10 @@ const updateProjectiles = (
                 CHARACTER_HEIGHT
             )
         ) {
+            if(projectile.ownerId == player.id)
+            {
+                player.player_stats.damage_done += projectile.damage;
+            }
             character.hp = Math.max(
                 0,
                 character.hp - projectile.damage
@@ -1254,6 +1258,7 @@ const updateProjectiles = (
         }
         for(const tank of tanks)
         {
+            
             // Ignore same team
             if (tank.team === projectile.team) {
                 continue;
@@ -1272,6 +1277,10 @@ const updateProjectiles = (
                     tank.height
                 )
             ) {
+                if(projectile.ownerId == player.id)
+                {
+                    player.player_stats.damage_done += projectile.damage;
+                }
                 tank.hp = Math.max(
                     0,
                     tank.hp - projectile.damage

@@ -11,6 +11,8 @@ mineExplosion.preload = "auto";
 const minePng = new Image();
 minePng.src = minepngsrc;
 
+const mineW = 35;
+const mineH = 35;
 const explosionParticles = [];
 
 const createExplosion = (x, y) =>
@@ -209,8 +211,8 @@ const drawMine = (context, mine) => {
         minePng,
         mine.x,
         mine.y,
-        20,
-        20
+        mineW,
+        mineH
     )
     drawExplosionParticles(context);
 };

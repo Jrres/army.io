@@ -142,27 +142,45 @@ const handleEnemyMovementRandomizer = (deltaTime, characters, TOO_FAR_RADIUS, TO
         );
     });
 };
+const getNearestEnemy = (ally, characters) => {
+
+    let nearest = null;
+    let bestDist = Infinity;
+
+    characters.forEach(character => {
+
+        if (character.hp <= 0)
+            return;
+
+        if (character.team === ally.team)
+            return;
+
+        const dist = Math.hypot(
+            character.x - ally.x,
+            character.y - ally.y
+        );
+
+        if (dist < bestDist) {
+            bestDist = dist;
+            nearest = character;
+        }
+    });
+
+    return nearest;
+};
 const handleEnemyProjectiles = (gameTime, characters, projectiles) => {
     const player = getPlayer(characters);
-    if (!player) return;
-
-    const target =
-        player.isTank && player.tank
-            ? player.tank
-            : player;
     if (!player || player.hp <= 0) return;
 
-    characters.forEach((enemy) => {
-        // Skip player, dead enemies and allies
-        if (enemy.isPlayer) return;
-        if (enemy.hp <= 0) return;
-        if(enemy.type == "ally") return;
-
-        // Initialize cooldown timer
-        if (enemy.lastShotTime === undefined) {
-            enemy.lastShotTime = 0;
-        }
+    const enemies = characters.filter(c => c.type === "enemy");
+    enemies.forEach((enemy) => {
         // Fire when cooldown expires
+        const target =
+        player.isTank && player.tank
+            ? player.tank
+            : getNearestEnemy(enemy, characters);
+        if (!target) return;
+
         if (
             gameTime - enemy.lastShotTime >=
             enemy.projectile_delay
@@ -194,7 +212,6 @@ const handleEnemyProjectiles = (gameTime, characters, projectiles) => {
                 );
 
             }
-
             enemy.lastShotTime = gameTime;
         }
     });

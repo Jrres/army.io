@@ -478,6 +478,7 @@ const updateTanks = (
             player.isDisabled = true;
             player.isTank = true;
             player.tank = tank;
+            player.player_stats.tanks_driven++;
         }
         //tank.team is a color where blue is the enemy
         if (tank.team === "blue")

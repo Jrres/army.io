@@ -1,3 +1,8 @@
+//to commit new file updates to git do:
+//git add . (adds everything) or individual files 
+//git commit -m "message"
+//git push -u origin main
+//this should update github repo and vercel project automatically
 //frontend
 import { useRef, useEffect } from "react";
 import "./canvas.css";
@@ -37,10 +42,11 @@ import { drawTankHealthBar, drawTankSelectionUi } from "./helpers/helperTankUi.j
 //assets
 import background_image from "./assets/game-background-1.png";
 import background_image_2 from "./assets/game-background-2.png";
-import background_image_3 from "./assets/game-background-3.png"
-import border_src from "./assets/border.png"
+import background_image_3 from "./assets/game-background-3.png";
+import border_src from "./assets/border.png";
 
-import ocean_bg_src from "./assets/ocean_bg.png"
+import death_screen_src from "./assets/deathscreenimage.png";
+import ocean_bg_src from "./assets/ocean_bg.png";
 import minecraft_death_sound from "./assets/minecraft_death.mp3";
 import healing_sound from "./assets/heal.wav";
 import damage_buff_sound from "./assets/damage.wav";
@@ -65,13 +71,19 @@ import classes_b_w_src from "./assets/classes_black_white.png";
 import menu_src from "./assets/menu_background.png";
 import class_lock_in_sound from "./assets/class_lock_in_sound.wav";
 import alliesOperator from "./assets/alliesbuffsound.mp3";
-
+import deathscreenambience from "./assets/deathscreensound.mp3";
+//shooter images
 import assault_class_src from "./assets/spritesheets/AssaultClassShooter.png";
 import recon_class_src from "./assets/spritesheets/ReconClassShooter.png";
 import support_class_src from "./assets/spritesheets/SupportClassShooter.png";
 import juggernaut_class_src from "./assets/spritesheets/JuggernautClassShooter.png";
+import red_assault_class_src from "./assets/spritesheets/RedAssaultClassShooter.png"
+import blue_assault_class_src from "./assets/spritesheets/BlueAssaultClassShooter.png"
 
+
+//sounds
 import menu_music_src from "./assets/fast-glitchy-piano-progression_200bpm_B_minor.wav";
+
 import game_music_2_src from "./assets/game_sound_track.wav";
 
 import rain_sound_src from "./assets/rain.mp3"
@@ -145,6 +157,28 @@ const background_music_2 = new Audio(background_music_src_2);
 background_music_2.volume = 0.4;
 background_music_2.preload = "auto";
 
+const deathscreensound = new Audio(deathscreenambience);
+deathscreensound.volume = 0.4;
+deathscreensound.preload = "auto";
+deathscreensound.loop = "true";
+
+const allSounds = [
+    deathscreensound, 
+    background_music_2, 
+    background_music, 
+    alliesBuffSound, 
+    jester_laugh,
+    tower_hit,
+    as_sound,
+    speed_buff_sound,
+    damage_buff_sound_effect,
+    health_sound,
+    death_sound,
+    lock_in_sound,
+    game_soundtrack,
+    menu_music,
+    rain_sound
+];
 
 const Canvas = (props) => {
     const ref = useRef(null);
@@ -172,6 +206,7 @@ const Canvas = (props) => {
             menu: 1,
             game: 2,
             pause: 3,
+            dead: 4
         }
         let cur_game_state = game_state.menu;
 
@@ -184,7 +219,15 @@ const Canvas = (props) => {
         let cur_menu_state = menu_state.class;
 
         //buttons 
-
+        const death_screen_button = {
+            x: canvas.width / 2 - 200,
+            y: canvas.height - 100,
+            width: 400,
+            height: 50,
+            color: '#ff006a',
+            text: 'Play Again',
+            textColor: '#FFFFFF'
+        }
         const start_button = {
             x: canvas.width / 2 - 200,
             y: canvas.height - 200,
@@ -353,6 +396,12 @@ const Canvas = (props) => {
         const assault_class_shooter = new Image();
         assault_class_shooter.src = assault_class_src;
 
+        const red_assault_class_shooter = new Image();
+        red_assault_class_shooter.src = red_assault_class_src;
+
+        const blue_assault_class_shooter = new Image();
+        blue_assault_class_shooter.src = blue_assault_class_src;
+
         const recon_class_shooter = new Image();
         recon_class_shooter.src = recon_class_src;
 
@@ -442,8 +491,23 @@ const Canvas = (props) => {
                 //disable player
                 isDisabled: false,
                 isTank: false,
-                tank: null
-
+                tank: null,
+                lastShotTime: 0,
+                player_stats:
+                {
+                    kills: 0,
+                    rounds: 7,
+                    healing_done: 0,
+                    damage_done : 0,
+                    max_health: 100,
+                    bosses_killed: 0,
+                    tanks_driven: 0,
+                    enemy_tanks_killed: 0,
+                    snipers_killed: 0,
+                    assault_targets_killed: 0,
+                    support_targets_killed: 0,
+                    juggernaut_targets_killed: 0,
+                }
             },
             {
                 id: nextCharacterId++,
@@ -478,6 +542,7 @@ const Canvas = (props) => {
                     zigZagAngle: 0,
                     forward: true
                 },
+                lastShotTime: 0
             },
             {
                 id: nextCharacterId++,
@@ -512,6 +577,7 @@ const Canvas = (props) => {
                     zigZagAngle: 0,
                     forward: true
                 },
+                lastShotTime: 0
             },
             {
                 id: nextCharacterId++,
@@ -546,7 +612,7 @@ const Canvas = (props) => {
                     zigZagAngle: 0,
                     forward: true
                 },
-
+                lastShotTime: 0
             },
         ];
 
@@ -608,7 +674,16 @@ const Canvas = (props) => {
                 color: "yellow",
             }
         }
+        const updateClasses = (classes) => {
+            Object.values(classes).forEach(classData => {
+                classData.maxHp += 10;
+                classData.damage += 2;
+                classData.move_speed = Math.min(3, classData.move_speed+0.02);
 
+                // Optional: increase current HP too
+                classData.hp = Math.min(classData.hp + 2, classData.maxhp);
+            });
+        };
         const buff_types =
         {
             "movement_speed":
@@ -669,7 +744,97 @@ const Canvas = (props) => {
         //==========================
         //Round
         //==========================
+        const resetGame = () => {
+            const playerIndex = characters.findIndex(c => c.isPlayer);
+            allSounds.forEach(sound => {
+                sound.pause();
+                sound.currentTime = 0;
+            })
+            //play game music again;
+            const roll = Math.random();
 
+            roll > 0.5 ? game_soundtrack.play() : background_music_2.play();
+            round = 7;
+            // Clear entities
+            projectiles.length = 0;
+            tank_projectiles.length = 0;
+            healing_projectiles.length = 0;
+            projectile_impact_visual.length = 0;
+            Tanks.length = 0;
+            mines.length = 0;
+            buffs.length = 0;
+            health_pods.length = 0;
+            balls.length = 0;
+
+            // Remove enemies and allies
+            for (let i = characters.length - 1; i >= 0; i--) {
+                if (
+                    characters[i].type === "enemy" ||
+                    characters[i].type === "ally"
+                ) {
+                    characters.splice(i, 1);
+                }
+            }
+
+            // Reset player
+            characters[playerIndex] =
+            {
+                id: nextCharacterId++,
+                x: 1000,
+                y: 500,
+                hp: 100,
+                maxHp: 100000,
+                color: "#eb4034",
+                label: "You",
+                class: "Assault",
+                isPlayer: true,
+                type: "player",
+                moveAngle: 0,
+                turnTimer: 0,
+                targetAngle: 0,
+                hitTimer: 0,
+                buffTimer: 0,
+                buffs: [],
+                team: "red",
+                jesterAngle: 0,
+                animationFrame: 0,
+                direction: "down",
+                animationTimer: 0,
+                health:
+                {
+                    ishealing: false,
+                    heal_amount: 0
+                },
+                stat_bonus:
+                {
+                    projectile_speed: 0,
+                    move_speed: 0,
+                    projectile_delay: 0,
+                    damage: 0
+                },
+                zigZagPattern:
+                {
+                    edge1: 0,
+                    edge2: 0,
+                    zigZagAngle: 0,
+                    forward: true
+                },
+                //disable player
+                isDisabled: false,
+                isTank: false,
+                tank: null,
+                lastShotTime: 0,
+                ...classes["Assault"]
+            }
+
+            deathScreenAlpha = 0;
+            roundStartTime = null;
+            last_shot_time = 0;
+            const player = characters[playerIndex]
+            spawnEnemies(player, current_time);
+
+            cur_game_state = game_state.game;
+        };
         // Helper function to get a random element from an array
         const getRandomFromArray = (array) => {
             return array[Math.floor(Math.random() * array.length)];
@@ -684,7 +849,8 @@ const Canvas = (props) => {
             const minY = boundaries.b_2.y;
             const maxY = boundaries.b_4.y;
             //create enemies
-            for (let i = 0; i < 3; i++) {
+            let number_of_enemies = Math.floor(round / 10) + 3;
+            for (let i = 0; i < number_of_enemies; i++) {
                 const x = Math.random() * (maxX - minX) + minX;
                 const y = Math.random() * (maxY - minY) + minY;
 
@@ -755,6 +921,7 @@ const Canvas = (props) => {
             roundStartTime = Infinity;
 
             round++;
+            player.player_stats.rounds = round;
 
             // Heal player
             player.hp += 10;
@@ -777,11 +944,12 @@ const Canvas = (props) => {
             createBuffIndicator(player, "-0.1 attack speed", "#ffc362");
 
             spawnEnemies(player, gameTime);
+            updateClasses(classes);
             // Optional tower spawn
             if (Math.random() < 0.25) {
                 createTower(context);
             }
-            if (round >= 7 && Math.random() < 0.95) {
+            if (round >= 7 && Math.random() < 0.05) {
                 const troll = Math.random();
                 let isEnemyTank = false;
                 if(troll <= 0.5)
@@ -843,7 +1011,109 @@ const Canvas = (props) => {
         // =========================
         // DRAWING
         // =========================
+        const drawEndingStats = () => {
+            const player = getPlayer(characters);
+            const player_stats = player.player_stats;
 
+            const startX = canvas.width / 2 - 220;
+            const startY = canvas.height / 2 + 20;
+
+            const tableWidth = 440;
+            const rowHeight = 34;
+            const col1Width = 360;
+            const col2Width = tableWidth - col1Width;
+
+            context.font = "20px Orbitron";
+            context.textBaseline = "middle";
+            context.textAlign = "left";
+
+            // Header
+            context.globalAlpha = 0.8;
+            context.fillStyle = "#1f1f1f";
+            context.fillRect(startX, startY, tableWidth, rowHeight);
+
+            context.strokeStyle = "rgba(255,255,255,0.4)";
+            context.lineWidth = 2;
+            context.strokeRect(startX, startY, tableWidth, rowHeight);
+
+            context.fillStyle = "white";
+            context.fillText("Statistic", startX + 15, startY + rowHeight / 2);
+            context.fillText("Value", startX + col1Width + 15, startY + rowHeight / 2);
+
+            let i = 0;
+
+            for (const key in player_stats) {
+                const y = startY + rowHeight * (i + 1);
+
+                // Alternate row colors
+                context.globalAlpha = 0.65;
+                context.fillStyle = i % 2 === 0
+                    ? "#2563eb"      // blue
+                    : "#7c3aed";     // purple
+
+                context.fillRect(startX, y, tableWidth, rowHeight);
+
+                // Cell borders
+                context.globalAlpha = 1;
+                context.strokeStyle = "rgba(255,255,255,0.25)";
+                context.strokeRect(startX, y, tableWidth, rowHeight);
+
+                // Vertical divider
+                context.beginPath();
+                context.moveTo(startX + col1Width, y);
+                context.lineTo(startX + col1Width, y + rowHeight);
+                context.stroke();
+
+                // Text
+                context.fillStyle = "white";
+                context.fillText(key, startX + 15, y + rowHeight / 2);
+                context.fillText(
+                    Math.round(player_stats[key]).toString(),
+                    startX + col1Width + 15,
+                    y + rowHeight / 2
+                );
+
+                i++;
+            }
+
+            context.globalAlpha = 1;
+        };
+        const deathScreenImage = new Image();
+        deathScreenImage.src = death_screen_src;
+        let deathScreenAlpha = 0;
+        const drawDeathScreen = () => {
+            const player = getPlayer(characters);
+            if(player && player.hp > 0)
+            {
+                return;
+            }
+            else
+            {
+                deathscreensound.play();
+                deathScreenAlpha = Math.min(deathScreenAlpha + 0.02, 1);
+                context.save();
+                context.filter = "blur(2px)";
+                context.globalAlpha = deathScreenAlpha;
+
+                context.drawImage(
+                    deathScreenImage,
+                    0,
+                    0,
+                    canvas.width,
+                    canvas.height
+                );
+
+                context.restore();
+
+                context.fillStyle = "red";
+                context.font = "40px Orbitron";
+                context.fillText(
+                    "Defeat", 
+                    canvas.width / 2,
+                    canvas.height / 2
+                );
+            }
+        }
         /**
    * Create the death effect once when a character dies.
    * Call this when character.hp drops to 0.
@@ -945,6 +1215,7 @@ const Canvas = (props) => {
          * Check all characters and spawn death particles if needed.
          * Call this every frame.
          */
+        let isGameReset = false;
         const checkCharacterDeaths = () => {
             const player = getPlayer(characters);
 
@@ -954,8 +1225,32 @@ const Canvas = (props) => {
                 if (character.hp <= 0) {
                     // never delete player
                     if (character.isPlayer) {
+                        cur_game_state = game_state.dead
+                        isGameReset = true;
                         character.hp = 0;
                         continue;
+                    }
+                    else
+                    {
+                        if(character.team !== player.team)
+                        {
+                            player.player_stats.kills++;
+                            switch(character.class)
+                            {
+                                case "Assault":
+                                    player.player_stats.assault_targets_killed++;
+                                    break;
+                                case "Recon":
+                                    player.player_stats.snipers_killed++;
+                                    break;
+                                case "Juggernaut":
+                                    player.player_stats.juggernaut_targets_killed++;
+                                    break;
+                                case "Support":
+                                    player.player_stats.support_targets_killed++;
+                                    break;
+                            }
+                        }
                     }
 
                     drawDeathEffect(character);
@@ -969,12 +1264,17 @@ const Canvas = (props) => {
                 const tank = Tanks[i];
 
                 if (tank.hp <= 0) {
+                    //reset player back to normal
                     if (player && player.tank === tank) {
                         player.tank = null;
                         player.isTank = false;
                         player.isDisabled = false;
                         player.x = tank.x;
                         player.y = tank.y;
+                    }
+                    if(tank.team !== player.team)
+                    {
+                        player.player_stats.tanks_killed++;
                     }
 
                     drawDeathEffect(tank);
@@ -1076,7 +1376,14 @@ const Canvas = (props) => {
             let shooter_image = assault_class_shooter;
             switch (character.class) {
                 case "Assault":
-                    shooter_image = assault_class_shooter;
+                    if(character.team === "red")
+                    {
+                        shooter_image = red_assault_class_shooter;
+                    }
+                    else 
+                    {
+                        shooter_image = blue_assault_class_shooter;
+                    }
                     break;
                 case "Recon":
                     shooter_image = recon_class_shooter;
@@ -1210,6 +1517,8 @@ const Canvas = (props) => {
             }
 
             const player = getPlayer(characters);
+            //update max health
+            player.player_stats.max_health = Math.max(player.player_stats.max_health, player.hp);
             if (!player || player.hp <= 0) return;
 
             // Filter out pods that were picked up
@@ -1229,6 +1538,7 @@ const Canvas = (props) => {
                 );
 
                 if (isColliding) {
+                    player.player_stats.healing_done += health_amount;
                     health_sound.play();
                     // Heal but do not exceed max HP
                     player.health.is_healing = true;
@@ -2405,8 +2715,25 @@ const Canvas = (props) => {
 
             }
             //gamestate.end
-            else {
-
+            else 
+            {
+                if(isGameReset)
+                {
+                    //only do this a single time
+                    isGameReset = false;
+                    //reset all things after death to avoid weird logic in this game state
+                    //like enemies running around or the screen changing colors etc.
+                    //clear out all existing sounds to not hear the game music playing when dead
+                    allSounds.forEach(sound => 
+                    {
+                        sound.pause();
+                        sound.currentTime = 0;
+                    }
+                    )
+                }
+                drawDeathScreen();
+                drawEndingStats();
+                draw_start_button(death_screen_button);
             }
 
             animationId = requestAnimationFrame(gameLoop);
@@ -2691,6 +3018,19 @@ const Canvas = (props) => {
                         roll > 0.5 ? game_soundtrack.play() : background_music_2.play();
                         cur_game_state = game_state.game;
                     }
+                }
+            }
+            else if(game_state.dead == cur_game_state)
+            {
+                //draw restart button here and reset all the characters
+                if (
+                    screenX >= death_screen_button.x &&
+                    screenX <= death_screen_button.x + death_screen_button.width &&
+                    screenY >= death_screen_button.y &&
+                    screenY <= death_screen_button.y + death_screen_button.height
+                ) 
+                {
+                    resetGame();
                 }
             }
             if (player.isTank && player.tank) {
