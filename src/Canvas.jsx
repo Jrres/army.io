@@ -824,6 +824,21 @@ const Canvas = (props) => {
                 isTank: false,
                 tank: null,
                 lastShotTime: 0,
+                player_stats:
+                {
+                    kills: 0,
+                    rounds: 7,
+                    healing_done: 0,
+                    damage_done : 0,
+                    max_health: 100,
+                    bosses_killed: 0,
+                    tanks_driven: 0,
+                    enemy_tanks_killed: 0,
+                    snipers_killed: 0,
+                    assault_targets_killed: 0,
+                    support_targets_killed: 0,
+                    juggernaut_targets_killed: 0,
+                },
                 ...classes["Assault"]
             }
 
