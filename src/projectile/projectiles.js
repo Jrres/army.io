@@ -1264,6 +1264,13 @@ const updateProjectiles = (
                 0,
                 character.hp - projectile.damage
             );
+            const length = Math.hypot(projectile.dx, projectile.dy);
+            character.knockback = 
+            {
+                force: 1.3,
+                dx: projectile.dx / length,
+                dy: projectile.dy / length
+            };
             hit_marker.play();
             createBuffIndicator(
                 character,

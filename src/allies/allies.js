@@ -160,7 +160,7 @@ const handleAllyMovement = (
         );
     });
 };
-const enemyTarget = (characters, projectiles, currentTime) =>
+const enemyTarget = (characters, projectiles, tanks, currentTime) =>
 {
     const allies = characters.filter(c => c.type === "ally");
 
@@ -169,7 +169,7 @@ const enemyTarget = (characters, projectiles, currentTime) =>
         if (currentTime - ally.lastShotTime < ally.projectile_delay)
             return;
 
-        const target = getNearestEnemy(ally, characters);
+        const target = getNearestEnemy(ally, characters, tanks);
 
         if (!target)
             return;
@@ -189,7 +189,7 @@ const allyApplyHeal = () =>
     //check for support class
     //heal player or surrounding allies if they are low
 }
-const getNearestEnemy = (ally, characters) => {
+const getNearestEnemy = (ally, characters, tanks) => {
 
     let nearest = null;
     let bestDist = Infinity;
@@ -212,6 +212,24 @@ const getNearestEnemy = (ally, characters) => {
             nearest = character;
         }
     });
+
+    tanks.forEach(tank => {
+        if (tank.hp <= 0)
+            return;
+
+        if (tank.team === ally.team)
+            return;
+
+        const dist = Math.hypot(
+            tank.x - ally.x,
+            tank.y - ally.y
+        );
+
+        if (dist < bestDist) {
+            bestDist = dist;
+            nearest = tank;
+        }
+    })
 
     return nearest;
 };

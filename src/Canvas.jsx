@@ -84,12 +84,22 @@ import class_lock_in_sound from "./assets/class_lock_in_sound.wav";
 import alliesOperator from "./assets/alliesbuffsound.mp3";
 import deathscreenambience from "./assets/deathscreensound.mp3";
 //shooter images
-import assault_class_src from "./assets/spritesheets/AssaultClassShooter.png";
+//recon class
 import recon_class_src from "./assets/spritesheets/ReconClassShooter.png";
+import blue_recon_class_src from "./assets/spritesheets/BlueReconClassShooter.png";
+import red_recon_class_src from "./assets/spritesheets/RedReconClassShooter.png";
+//support class
 import support_class_src from "./assets/spritesheets/SupportClassShooter.png";
+import blue_support_class_src from "./assets/spritesheets/BlueSupportClassShooter.png";
+import red_support_class_src from "./assets/spritesheets/RedSupportClassShooter.png";
+//juggernaut class
 import juggernaut_class_src from "./assets/spritesheets/JuggernautClassShooter.png";
-import red_assault_class_src from "./assets/spritesheets/RedAssaultClassShooter.png"
-import blue_assault_class_src from "./assets/spritesheets/BlueAssaultClassShooter.png"
+import blue_juggernaut_class_src from "./assets/spritesheets/BlueJuggernautClassShooter.png";
+import red_juggernaut_class_src from "./assets/spritesheets/RedJuggernautClassShooter.png";
+//assault class
+import assault_class_src from "./assets/spritesheets/AssaultClassShooter.png";
+import blue_assault_class_src from "./assets/spritesheets/BlueAssaultClassShooter.png";
+import red_assault_class_src from "./assets/spritesheets/RedAssaultClassShooter.png";
 
 
 //sounds
@@ -401,11 +411,31 @@ const Canvas = (props) => {
         const recon_class_shooter = new Image();
         recon_class_shooter.src = recon_class_src;
 
+        const red_recon_class_shooter = new Image();
+        red_recon_class_shooter.src = red_recon_class_src;
+
+        const blue_recon_class_shooter = new Image();
+        blue_recon_class_shooter.src = blue_recon_class_src;
+
         const support_class_shooter = new Image();
         support_class_shooter.src = support_class_src;
 
+        const red_support_class_shooter = new Image();
+        red_support_class_shooter.src = red_support_class_src;
+
+        const blue_support_class_shooter = new Image();
+        blue_support_class_shooter.src = blue_support_class_src;
+
         const juggernaut_class_shooter = new Image();
         juggernaut_class_shooter.src = juggernaut_class_src;
+
+        const red_juggernaut_class_shooter = new Image();
+        red_juggernaut_class_shooter.src = red_juggernaut_class_src;
+
+        const blue_juggernaut_class_shooter = new Image();
+        blue_juggernaut_class_shooter.src = blue_juggernaut_class_src;
+
+
         const ocean_img = new Image();
         ocean_img.src = ocean_bg_src;
 
@@ -503,7 +533,8 @@ const Canvas = (props) => {
                     assault_targets_killed: 0,
                     support_targets_killed: 0,
                     juggernaut_targets_killed: 0,
-                }
+                },
+                knockback: 0
             },
             {
                 id: nextCharacterId++,
@@ -1259,6 +1290,38 @@ const Canvas = (props) => {
          * Check all characters and spawn death particles if needed.
          * Call this every frame.
          */
+        const updateCharacterKnockback = () => {
+            characters.forEach(ch => {
+
+                if (!ch.knockback)
+                    return;
+
+                if (ch.knockback.force <= 0)
+                    return;
+
+                ch.x += ch.knockback.dx * ch.knockback.force;
+                ch.y += ch.knockback.dy * ch.knockback.force;
+
+                ch.knockback.force *= 0.90;
+
+                if (ch.knockback.force < 0.1)
+                    ch.knockback = null;
+            });
+        };
+        const player_hp_inc_delay = 1000;
+        let cur_hp_time = 0;
+        const increasePlayerHealthOverTime = (gameTime) => {
+            const player = getPlayer(characters);
+            if (!player)
+                return;
+            // no need extra healing when player is already maxhp
+            if(gameTime - cur_hp_time > player_hp_inc_delay && player.hp < 100)
+            {
+                player.hp++;
+                cur_hp_time = gameTime;
+            }
+
+        }
         let isGameReset = false;
         const checkCharacterDeaths = () => {
             const player = getPlayer(characters);
@@ -1430,13 +1493,34 @@ const Canvas = (props) => {
                     }
                     break;
                 case "Recon":
-                    shooter_image = recon_class_shooter;
+                    if(character.team === "red")
+                    {
+                        shooter_image = red_recon_class_shooter;
+                    }
+                    else 
+                    {
+                        shooter_image = blue_recon_class_shooter;
+                    }
                     break;
                 case "Support":
-                    shooter_image = support_class_shooter;
+                    if(character.team === "red")
+                    {
+                        shooter_image = red_support_class_shooter;
+                    }
+                    else 
+                    {
+                        shooter_image = blue_support_class_shooter;
+                    }
                     break;
                 case "Juggernaut":
-                    shooter_image = juggernaut_class_shooter;
+                    if(character.team === "red")
+                    {
+                        shooter_image = red_juggernaut_class_shooter;
+                    }
+                    else 
+                    {
+                        shooter_image = blue_juggernaut_class_shooter;
+                    }
                 default:
                     break;
             }
@@ -2710,7 +2794,7 @@ const Canvas = (props) => {
                 updateAirStrikes(game_time, characters);
                 updateTanks(Tanks, keys, boundaries, getPlayer(characters), game_time, tank_projectiles);
                 handleEnemyProjectiles(current_time, characters, projectiles);
-                enemyTarget(characters, projectiles, game_time)
+                enemyTarget(characters, projectiles, Tanks, game_time)
 
                 handleEnemyMines(game_time, characters, mines, Tanks);
 
@@ -2721,6 +2805,9 @@ const Canvas = (props) => {
                         ch.hitTimer--;
                 }
                 )
+
+                updateCharacterKnockback();
+                increasePlayerHealthOverTime(game_time);
                 //healing things
                 addHealthPods(game_time);
                 heal_player();
@@ -3108,11 +3195,14 @@ const Canvas = (props) => {
             }
             if (!player || player.hp <= 0 || player.isDisabled)
                 return;
+
             if (last_shot_time === 0) {
-                if (player.buffs.some(buff => buff.buff_type == "Jester")) {
+                if (player.buffs.some(buff => buff.buff_type == "Jester")) 
+                {
                     fireJesterProjectile(getPlayer(characters), projectiles, characters);
                 }
-                else {
+                else 
+                {
                     // only supports can heal
                     if (keys.q && player.class === "Support") {
                         fireHealProjectile(
@@ -3122,7 +3212,8 @@ const Canvas = (props) => {
                             healing_projectiles);
                         //toggle healing ability
                     }
-                    else {
+                    else 
+                    {
                         fireProjectile(worldPos.x, worldPos.y, player, projectiles);
                     }
                 }
@@ -3135,9 +3226,11 @@ const Canvas = (props) => {
                 if (player.buffs.some(buff => buff.buff_type == "Jester")) {
                     fireJesterProjectile(getPlayer(characters), projectiles, characters);
                 }
-                else {
+                else 
+                {
                     // only supports can heal
-                    if (keys.q && player.class === "Support") {
+                    if (keys.q && player.class === "Support") 
+                    {
                         fireHealProjectile(
                             worldPos.x,
                             worldPos.y,
@@ -3145,8 +3238,16 @@ const Canvas = (props) => {
                             healing_projectiles);
                         //toggle healing ability
                     }
-                    else {
-                        fireProjectile(worldPos.x, worldPos.y, player, projectiles);
+                    else 
+                    {
+                        let additional_bullets = Math.floor(round / 10);
+                        let bullet_count = 1 + additional_bullets;
+                        //fire multiple bullets as the rounds go by
+                        let offset_x = Math.random() * 2;
+                        for(let x = 0; x < bullet_count; x++)
+                        {
+                            fireProjectile(worldPos.x + offset_x, worldPos.y, player, projectiles);
+                        }
                     }
                 }
                 last_shot_time = current_time;
