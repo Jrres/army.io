@@ -18,5 +18,18 @@ const normalizeAngle = (angle) => {
     while (angle < -Math.PI) angle += Math.PI * 2;
     return angle;
 };
+const pointInCircle = (
+    pointX,
+    pointY,
+    circleX,
+    circleY,
+    radius
+) => {
 
-export {getPlayer, pointInRect, deleteCharacters, normalizeAngle};
+    const dx = pointX - circleX;
+    const dy = pointY - circleY;
+
+    return dx * dx + dy * dy <= radius * radius;
+};
+
+export {getPlayer, pointInRect, deleteCharacters, normalizeAngle, pointInCircle};

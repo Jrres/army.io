@@ -10,7 +10,14 @@ import "./canvas.css";
 import Camera from "./Camera.js"
 import UI from "./UI.js"
 import { pointInRect, getPlayer, deleteCharacters } from "./helpers/helper.js"
-import { createEnemy, handleEnemyMovementRandomizer, handleEnemyProjectiles, handleEnemyMines } from "./enemies/enemies.js"
+import { 
+    createEnemy, 
+    handleEnemyMovementRandomizer, 
+    handleEnemyProjectiles, 
+    handleEnemyMines,
+    increaseEnemyDifficulty,
+    resetEnemyDifficulty
+} from "./enemies/enemies.js"
 import { updateMines, drawMine, createMine } from "./projectile/mines.js"
 import {
 fireProjectile,
@@ -39,13 +46,17 @@ import { createTower, getTowers } from "./towers/tower.js"
 import { drawBuffIndicators, updateBuffIndicators, createBuffIndicator } from "./helpers/helpersUi.js"
 import { drawTank, updateTanks, rotateTank, handlePlayerTankProjectile, createTank, pauseTankSounds } from "./vehicles/tank.js";
 import { drawTankHealthBar, drawTankSelectionUi } from "./helpers/helperTankUi.js";
+import { drawAirStrikes, updateAirStrikes, createAirStrike, getAirStrikes, clearAirStrikes } from "./projectile/airstrike.js";
+
 //assets
+
 import background_image from "./assets/game-background-1.png";
 import background_image_2 from "./assets/game-background-2.png";
 import background_image_3 from "./assets/game-background-3.png";
 import border_src from "./assets/border.png";
 
 import death_screen_src from "./assets/deathscreenimage.png";
+import death_screen_video_src from "./assets/deathscreenvideo.mp4"
 import ocean_bg_src from "./assets/ocean_bg.png";
 import minecraft_death_sound from "./assets/minecraft_death.mp3";
 import healing_sound from "./assets/heal.wav";
@@ -88,30 +99,20 @@ import game_music_2_src from "./assets/game_sound_track.wav";
 
 import rain_sound_src from "./assets/rain.mp3"
 
-import { Howl, Howler } from 'howler';
+const rain_sound = new Audio(rain_sound_src);
+rain_sound.volume = 0.15;
+rain_sound.preload = "auto";
+rain_sound.loop = true;
 
-const rain_sound = new Howl({
-    src: [rain_sound_src],
-    html5: true,
-    volume: 0.15,
-    loop: true,
-})
+const menu_music = new Audio(menu_music_src);
+menu_music.volume = 0.15;
+menu_music.loop = true;
+menu_music.play();
 
-const menu_music = new Howl({
-    src: [menu_music_src],
-    html5: true,
-    volume: 0.15,
-    loop: true,
-});
-const menu_music_id = menu_music.play();
-
-//sounds
-const game_soundtrack = new Howl({
-    src: [game_music_2_src],
-    html5: true,
-    volume: 0.15,
-    loop: true,
-})
+const game_soundtrack = new Audio(game_music_2_src);
+game_soundtrack.volume = 0.15;
+game_soundtrack.preload = "auto";
+game_soundtrack.loop = true;
 
 const lock_in_sound = new Audio(class_lock_in_sound);
 lock_in_sound.volume = 0.15;
@@ -186,16 +187,11 @@ const Canvas = (props) => {
         const canvas = ref.current;
         const context = canvas.getContext("2d");
 
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvas.style.width = "100vw";
+        canvas.style.height = "100vh";
 
-        //background_music.play();
-
-        const resizeCanvas = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        };
-
-        resizeCanvas(); // Set initial size
-        window.addEventListener("resize", resizeCanvas);
         // =========================
         // CONSTANTS
         // =========================
@@ -632,44 +628,48 @@ const Canvas = (props) => {
             "Assault":
             {
                 hp: 100,
-                maxhp: 100000,
+                maxHp: 100000,
                 projectile_speed: 20,
                 projectile_radius: 5,
                 projectile_delay: 300,
                 move_speed: 1.3,
+                base_move_speed: 1.3,
                 damage: 10,
                 color: "orange",
             },
             "Recon":
             {
                 hp: 80,
-                maxhp: 100000,
+                maxHp: 100000,
                 projectile_speed: 20,
                 projectile_radius: 3,
                 projectile_delay: 1000,
                 move_speed: 1.5,
+                base_move_speed: 1.5,
                 damage: 30,
                 color: "purple",
             },
             "Support":
             {
                 hp: 100,
-                maxhp: 100000,
+                maxHp: 100000,
                 projectile_speed: 6,
                 projectile_radius: 5,
                 projectile_delay: 500,
                 move_speed: 1,
+                base_move_speed: 1,
                 damage: 5,
                 color: "cyan",
             },
             "Juggernaut":
             {
                 hp: 150,
-                maxhp: 150000,
+                maxHp: 150000,
                 projectile_speed: 10,
                 projectile_radius: 10,
                 projectile_delay: 500,
                 move_speed: 0.8,
+                base_move_speed: 0.8,
                 damage: 10,
                 color: "yellow",
             }
@@ -681,7 +681,7 @@ const Canvas = (props) => {
                 classData.move_speed = Math.min(3, classData.move_speed+0.02);
 
                 // Optional: increase current HP too
-                classData.hp = Math.min(classData.hp + 2, classData.maxhp);
+                classData.hp = Math.min(classData.hp + 2, classData.maxHp);
             });
         };
         const buff_types =
@@ -752,8 +752,10 @@ const Canvas = (props) => {
             })
             //play game music again;
             const roll = Math.random();
-
+            game_soundtrack.currentTime = 0;
+            background_music_2.currentTime = 0;
             roll > 0.5 ? game_soundtrack.play() : background_music_2.play();
+            //reset round
             round = 7;
             // Clear entities
             projectiles.length = 0;
@@ -765,6 +767,8 @@ const Canvas = (props) => {
             buffs.length = 0;
             health_pods.length = 0;
             balls.length = 0;
+            //reset enemy difficulties
+            resetEnemyDifficulty();
 
             // Remove enemies and allies
             for (let i = characters.length - 1; i >= 0; i--) {
@@ -827,6 +831,10 @@ const Canvas = (props) => {
                 player_stats:
                 {
                     kills: 0,
+                    snipers_killed: 0,
+                    assault_targets_killed: 0,
+                    support_targets_killed: 0,
+                    juggernaut_targets_killed: 0,
                     rounds: 7,
                     healing_done: 0,
                     damage_done : 0,
@@ -834,10 +842,6 @@ const Canvas = (props) => {
                     bosses_killed: 0,
                     tanks_driven: 0,
                     enemy_tanks_killed: 0,
-                    snipers_killed: 0,
-                    assault_targets_killed: 0,
-                    support_targets_killed: 0,
-                    juggernaut_targets_killed: 0,
                 },
                 ...classes["Assault"]
             }
@@ -952,11 +956,22 @@ const Canvas = (props) => {
             player.projectile_speed += 0.5;
             player.projectile_delay -= 0.1;
 
-            // Buff indicators
-            createBuffIndicator(player, "+0.5 damage", "#00ffe5");
-            createBuffIndicator(player, "+0.5 move speed", "#cbfffa");
-            createBuffIndicator(player, "+0.5 bullet speed", "#6600ff");
-            createBuffIndicator(player, "-0.1 attack speed", "#ffc362");
+            //increase difficulty
+            increaseEnemyDifficulty();
+
+            // Buff indicators -- need to set different locations above the player so the buffs arent overlapping --
+            setTimeout(()=>{
+                createBuffIndicator(player, "+0.5 damage", "#00ffe5");
+            },0.1)
+            setTimeout(()=>{
+                createBuffIndicator(player, "+0.5 move speed", "#cbfffa");
+            },0.1)
+            setTimeout(()=>{
+                createBuffIndicator(player, "+0.5 bullet speed", "#6600ff");
+            },0.1)
+            setTimeout(()=>{
+                createBuffIndicator(player, "-0.1 attack speed", "#ffc362");
+            },0.1)
 
             spawnEnemies(player, gameTime);
             updateClasses(classes);
@@ -1033,7 +1048,7 @@ const Canvas = (props) => {
             const startX = canvas.width / 2 - 220;
             const startY = canvas.height / 2 + 20;
 
-            const tableWidth = 440;
+            const tableWidth = 450;
             const rowHeight = 34;
             const col1Width = 360;
             const col2Width = tableWidth - col1Width;
@@ -1061,7 +1076,7 @@ const Canvas = (props) => {
                 const y = startY + rowHeight * (i + 1);
 
                 // Alternate row colors
-                context.globalAlpha = 0.65;
+                context.globalAlpha = 0.35;
                 context.fillStyle = i % 2 === 0
                     ? "#2563eb"      // blue
                     : "#7c3aed";     // purple
@@ -1095,6 +1110,17 @@ const Canvas = (props) => {
         };
         const deathScreenImage = new Image();
         deathScreenImage.src = death_screen_src;
+
+        const deathVideo = document.createElement("video");
+
+        deathVideo.src = death_screen_video_src;
+        deathVideo.muted = true;
+        deathVideo.loop = false;
+        deathVideo.playsInline = true;
+        deathVideo.preload = "auto";
+
+        deathVideo.currentTime = 0;
+
         let deathScreenAlpha = 0;
         const drawDeathScreen = () => {
             const player = getPlayer(characters);
@@ -1105,13 +1131,16 @@ const Canvas = (props) => {
             else
             {
                 deathscreensound.play();
+                deathVideo.play();
+
                 deathScreenAlpha = Math.min(deathScreenAlpha + 0.02, 1);
+
                 context.save();
                 context.filter = "blur(2px)";
                 context.globalAlpha = deathScreenAlpha;
 
                 context.drawImage(
-                    deathScreenImage,
+                    deathVideo,
                     0,
                     0,
                     canvas.width,
@@ -1121,11 +1150,11 @@ const Canvas = (props) => {
                 context.restore();
 
                 context.fillStyle = "red";
-                context.font = "40px Orbitron";
+                context.font = "60px Orbitron";
                 context.fillText(
                     "Defeat", 
                     canvas.width / 2,
-                    canvas.height / 2
+                    200
                 );
             }
         }
@@ -1334,15 +1363,15 @@ const Canvas = (props) => {
                 border_image,
                 -1000,
                 -1000,
-                context.canvas.width + 2000,
-                context.canvas.height + 2000
+                canvas.width + 2000,
+                canvas.height + 2000
             )
             context.drawImage(
                 image,
                 -500,
                 -500,
-                context.canvas.width + 1000,
-                context.canvas.height + 1000
+                canvas.width + 1000,
+                canvas.height + 1000
             );
 
             // //draw the boundaries
@@ -1431,7 +1460,7 @@ const Canvas = (props) => {
 
             // HP
             context.fillStyle = "red";
-            context.font = "20px Arial";
+            context.font = "12px orbitron";
             context.textAlign = "center";
             context.textBaseline = "bottom";
 
@@ -1443,7 +1472,7 @@ const Canvas = (props) => {
 
             // Label
             context.fillStyle = character.color;
-            context.font = "24px Arial";
+            context.font = "12px orbitron";
             context.textAlign = "center";
             context.textBaseline = "middle";
 
@@ -1718,9 +1747,23 @@ const Canvas = (props) => {
 
         const BUFF_DURATION = 5000; // 5 seconds
 
+        const updatePlayerSpeed = (player) => {
+            if (!player) return;
+
+            let speed = player.base_move_speed;
+
+            for (const buff of player.buffs) {
+                if (buff.buff_type === "movement_speed") {
+                    speed += buff.appliedValue;
+                }
+            }
+
+            player.move_speed = speed;
+        };
+
         // Apply a buff to the player
+        
         const applyBuff = (player, buff, gameTime) => {
-            // Store how much this specific buff changed the player
             let appliedValue = 0;
 
             createBuffVisual(buff.buff_type);
@@ -1728,8 +1771,9 @@ const Canvas = (props) => {
             switch (buff.buff_type) {
                 case "movement_speed":
                     speed_buff_sound.play();
+
                     appliedValue = buff.bonus.move_speed_bonus;
-                    player.move_speed += appliedValue;
+
                     createBuffIndicator(
                         player,
                         `+${Math.round(appliedValue)} Speed`,
@@ -1739,8 +1783,10 @@ const Canvas = (props) => {
 
                 case "damage":
                     damage_buff_sound_effect.play();
+
                     appliedValue = buff.bonus.damage;
                     player.damage += appliedValue;
+
                     createBuffIndicator(
                         player,
                         `+${Math.round(appliedValue)} Damage`,
@@ -1751,58 +1797,58 @@ const Canvas = (props) => {
                 case "attack_speed":
                     as_sound.play();
 
-                    // Convert attack speed bonus to delay reduction
                     appliedValue = buff.bonus.attack_speed_bonus * 100;
 
-                    // Prevent projectile delay from going below 50ms
                     const oldDelay = player.projectile_delay;
+
                     player.projectile_delay = Math.max(
                         50,
                         player.projectile_delay - appliedValue
                     );
 
-                    // Store the ACTUAL amount applied after clamping
                     appliedValue = oldDelay - player.projectile_delay;
 
                     createBuffIndicator(
                         player,
-                        `+${Math.round(appliedValue)} Damage`,
+                        `+${Math.round(appliedValue)} Attack Speed`,
                         "#ff8800"
                     );
                     break;
 
                 case "Jester":
-                    // Start playing at 3.2 seconds
                     jester_laugh.currentTime = 3.2;
                     jester_laugh.play();
-                    // Stop after 2 seconds of playback
+
                     setTimeout(() => {
-                        jester_laugh.pause();          // Stop the audio
-                        jester_laugh.currentTime = 0;  // Reset to the beginning (optional)
-                    }, 3000); // 2000 ms = 2 seconds
+                        jester_laugh.pause();
+                        jester_laugh.currentTime = 0;
+                    }, 3000);
+
                     appliedValue = buff.bonus.damage;
+
                     player.damage += appliedValue;
+
                     createBuffIndicator(
                         player,
                         `+${Math.round(appliedValue)} JESTER`,
                         "#b266ff"
                     );
                     break;
-                
+
                 case "allies":
                     alliesBuffSound.play();
                     spawnAllies(player, gameTime);
                     break;
-
             }
 
-            // Save buff info including exact applied value
-            //when i collect too many buffs at the same time, The game breaks and sometimes move_speed goes to -1
             player.buffs.push({
                 buff_type: buff.buff_type,
                 appliedValue: appliedValue,
-                buffExpiresAt: current_time + BUFF_DURATION
+                buffExpiresAt: gameTime + BUFF_DURATION
             });
+
+            // Recalculate speed after adding the buff.
+            updatePlayerSpeed(player);
         };
         // Remove a buff's effect
         const removeBuffEffect = (player, buffItem) => {
@@ -1818,21 +1864,16 @@ const Canvas = (props) => {
             });
 
             switch (buffItem.buff_type) {
-                case "movement_speed":
-                    player.move_speed -= buffItem.appliedValue;
-                    break;
-
                 case "damage":
                     player.damage -= buffItem.appliedValue;
                     break;
 
                 case "attack_speed":
-                    // Restore exactly what was removed
                     player.projectile_delay += buffItem.appliedValue;
                     break;
 
                 case "Jester":
-                    player.damage -= buffItem.appliedValue
+                    player.damage -= buffItem.appliedValue;
                     break;
             }
         };
@@ -1988,12 +2029,15 @@ const Canvas = (props) => {
                     player.buffs.splice(i, 1);
                 }
             }
+
             for (let i = buffs.length - 1; i >= 0; i--) {
-                const buff = buffs[i];
-                if (current_time >= buff.expiresAt) {
+                if (current_time >= buffs[i].expiresAt) {
                     buffs.splice(i, 1);
                 }
             }
+
+            // Always recalculate movement speed from active buffs.
+            updatePlayerSpeed(player);
         };
         // Spawn + pickup logic
         const buffPlayer = (gameTime) => {
@@ -2258,7 +2302,7 @@ const Canvas = (props) => {
         // =========================
         // DRAW EVERYTHING
         // =========================
-        const draw = () => {
+        const draw = (gameTime) => {
             // Draw living characters
             characters.forEach((character) => {
                 if (character.hp > 0) {
@@ -2276,10 +2320,10 @@ const Canvas = (props) => {
             Tanks.forEach(tank => {
                 drawTank(tank, context, keys)
             })
-
             mines.forEach(mine => {
                 drawMine(context, mine);
             })
+            drawAirStrikes(context, gameTime);
         };
 
         //ui
@@ -2639,7 +2683,8 @@ const Canvas = (props) => {
             }
             else if (cur_game_state == game_state.game) {
                 //background_music.play();
-                stop_playing_audio(menu_music, menu_music_id);
+                menu_music.pause();
+                menu_music.currentTime = 0;
                 const player = getPlayer(characters);
                 if (!player.isDisabled)
                     camera.follow(player);
@@ -2662,7 +2707,7 @@ const Canvas = (props) => {
                 updateProjectiles(projectiles, canvas, characters, projectile_impact_visual, getTowers(), Tanks);
                 updateTankProjectiles(tank_projectiles, canvas, characters, projectile_impact_visual, getTowers(), Tanks);
                 updateHealProjectiles(healing_projectiles, canvas, characters);
-
+                updateAirStrikes(game_time, characters);
                 updateTanks(Tanks, keys, boundaries, getPlayer(characters), game_time, tank_projectiles);
                 handleEnemyProjectiles(current_time, characters, projectiles);
                 enemyTarget(characters, projectiles, game_time)
@@ -2695,7 +2740,7 @@ const Canvas = (props) => {
                 deleteCharacters(characters);
                 RoundController(game_time);
 
-                draw();
+                draw(game_time);
                 drawHealthPods();
 
                 // Draw buffs
@@ -2703,6 +2748,7 @@ const Canvas = (props) => {
 
                 checkCharacterDeaths();
                 updateBalls();
+                createAirStrike(characters, game_time);
 
                 camera.end(context);
 
@@ -3124,7 +3170,6 @@ const Canvas = (props) => {
             window.removeEventListener("keydown", handleKeyDown);
             window.removeEventListener("keyup", handleKeyUp);
             canvas.removeEventListener("click", handleClick);
-            window.removeEventListener("resize", resizeCanvas);
             window.removeEventListener("mousemove", handleHover);
         };
     }, []);

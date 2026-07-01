@@ -3,11 +3,25 @@ import {fireProjectile, fireCircleEnemyProjectile, fireZigZagProjectile} from ".
 import { createMine } from "../projectile/mines.js";
 const CHARACTER_WIDTH = 30;
 const CHARACTER_HEIGHT = 30;
+let randomInc = 0;
 
  const enemy_types = [
             "circle_fighter",
             "regular"
         ]
+const getEnemyType = () => {
+    const Troll = Math.random();
+    const startingChance = 0.15 + randomInc
+    //this roll will go up based on the round your on
+    if(Troll < startingChance)
+    {
+        return"circle_fighter";
+    }
+    else
+    {
+        return "regular";
+    }
+}
 const createEnemy = (x, y, label, className, nextCharacterId, classes, current_time, new_stat_bonus) => {
     return {
         id: nextCharacterId,
@@ -18,7 +32,7 @@ const createEnemy = (x, y, label, className, nextCharacterId, classes, current_t
         class: className,
         isPlayer: false,
         type: "enemy",
-        enemy_type: enemy_types[Math.floor(Math.random() * enemy_types.length)],
+        enemy_type: getEnemyType(),
         team: "blue",
 
         // Merge class stats
@@ -253,4 +267,20 @@ const handleEnemyMines = (gameTime, characters, mines, tanks) => {
     }
 
 };
-export {createEnemy, handleEnemyMovementRandomizer, handleEnemyProjectiles, handleEnemyMines}
+const increaseEnemyDifficulty = () => 
+{
+    //add all of the enemy data here 
+    randomInc += 0.05 // this will increase the chance a circle shooter enemy is spawned
+}
+const resetEnemyDifficulty = () => 
+{
+    randomInc = 0;
+}
+export {
+    createEnemy, 
+    handleEnemyMovementRandomizer, 
+    handleEnemyProjectiles, 
+    handleEnemyMines, 
+    increaseEnemyDifficulty,
+    resetEnemyDifficulty
+}

@@ -1,23 +1,26 @@
-import sound from "../assets/pop_sound.mp3";
-import hit_sound from "../assets/hitmarker.mp3";
-import tank_hit_sound from "../assets/Tank ricochet.mp3";
+import sound_src from "../assets/pop_sound.mp3";
+import hit_src from "../assets/hitmarker.mp3";
+import tank_hit_src from "../assets/Tank ricochet.mp3";
 import bullet_wall from "../assets/bullet_wall.mp3";
 import { pointInRect } from "../helpers/helper";
 import tower_hit_src from "../assets/tower_hit.wav";
 import jester_laugh_src from "../assets/joker_laugh.mp3";
 import { getPlayer } from "../helpers/helper";
 import {createBuffIndicator} from "../helpers/helpersUi.js";
-import tank_explosion_sound from "../assets/tank_explosion.mp3";
+import tank_explosion_src from "../assets/tank_explosion.mp3";
+import tank_impact_src from "../assets/tank_impact_sound.mp3";
+import blue_bullet_image_src from "../assets/blue_bullet.png";
+import red_bullet_image_src from "../assets/red_bullet.png";
 
-const pop_Sound = new Audio(sound);
+const pop_Sound = new Audio(sound_src);
 pop_Sound.volume = 0.15;
 pop_Sound.preload = "auto";
 
-const hit_marker = new Audio(hit_sound);
+const hit_marker = new Audio(hit_src);
  hit_marker.volume = 0.15;
  hit_marker.preload = "auto";
 
-const tank_hit_marker = new Audio(tank_hit_sound);
+const tank_hit_marker = new Audio(tank_hit_src);
 tank_hit_marker.volume = 0.15;
 tank_hit_marker.preload = "auto";
 
@@ -33,9 +36,13 @@ const jester_laugh = new Audio(jester_laugh_src);
 jester_laugh.volume = 0.15;
 jester_laugh.preload = "auto";
 
-const tank_explosion = new Audio(tank_explosion_sound);
+const tank_explosion = new Audio(tank_explosion_src);
 tank_explosion.volume = 0.15;
 tank_explosion.preload = "auto";
+
+const tank_impact = new Audio(tank_impact_src);
+tank_impact.volume = 0.15;
+tank_impact.preload = "auto";
 
 const CHARACTER_WIDTH = 50;
 const CHARACTER_HEIGHT = 50;
@@ -43,6 +50,12 @@ const PROJECTILE_RADIUS = 5;
 const TANK_PROJECTILE_RADIUS = 30;
 const EXPLOSION_WIDTH = 100;
 const EXPLOSION_HEIGHT = 100;
+
+const blue_bullet_image = new Image();
+blue_bullet_image.src = blue_bullet_image_src;
+
+const red_bullet_image = new Image();
+red_bullet_image.src = red_bullet_image_src;
 
 // ======================================================
 // JESTER CHAOS PROJECTILES
@@ -537,7 +550,9 @@ const updateTankProjectiles = (
                 )
             ) {
                 const EXPLOSION_RADIUS = 200;
-
+                let sound = tank_impact.cloneNode();
+                sound.volume = tank_impact.volume;
+                sound.play().catch(() => {});
                 // ------------------------------
                 // DAMAGE CHARACTERS
                 // ------------------------------
@@ -619,7 +634,7 @@ const updateTankProjectiles = (
                     maxLife: 30
                 });
 
-                const sound = tank_explosion.cloneNode();
+                sound = tank_explosion.cloneNode();
                 sound.volume = tank_explosion.volume;
                 sound.play().catch(() => {});
 
@@ -658,8 +673,8 @@ const updateTankProjectiles = (
                     tank.hp - projectile.damage
                 );
 
-                const sound = tank_hit_marker.cloneNode();
-                sound.volume = tank_hit_marker.volume;
+                const sound = tank_impact.cloneNode();
+                sound.volume = tank_impact.volume;
                 sound.play().catch(() => {});
 
                 createBuffIndicator(
@@ -1025,15 +1040,27 @@ const drawProjectile = (projectile, context) => {
     }
 
     // Draw projectile
-    context.beginPath();
-    context.arc(
-        projectile.x,
-        projectile.y,
-        PROJECTILE_RADIUS,
-        0,
-        Math.PI * 2
+     context.save();
+
+    // Move the origin to the projectile
+    context.translate(projectile.x, projectile.y);
+
+    const angle = Math.atan2(projectile.dy, projectile.dx);
+    // Rotate toward the direction of travel
+    context.rotate(angle);
+
+    let bullet_image = projectile.team === "blue" ? blue_bullet_image : red_bullet_image;
+
+    // Draw centered on the origin
+    context.drawImage(
+        bullet_image,
+        -25,
+        -25,
+        20,
+        20
     );
-    context.fill();
+
+    context.restore();
 };
 const updateHealProjectiles = (
     projectiles,
