@@ -1,6 +1,7 @@
 Army . io 
 Play now at:
-https://project-2vpbi.vercel.app/game
+https://project-2vpbi.vercel.app
+
 
 Patch Notes: 
 release 1.3
